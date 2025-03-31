@@ -18,9 +18,12 @@ final class CharacterDetailWorker: CharacterDetailWorkerProtocol {
     // MARK: -
     // MARK: Variables
     
-    private let networkMonitor: NetworkMonitorProtocol
+    private var networkMonitor: NetworkMonitorProtocol
     private let networkService: NetworkSessionProtocol
     private let persistenceService: PersistenceServiceProtocol
+    
+    private var lastRequestedCharacterID: Int?
+    private var pendingCompletion: ((Result<Character_, RequestError>) -> Void)?
     
     // MARK: -
     // MARK: Initialization
@@ -30,24 +33,22 @@ final class CharacterDetailWorker: CharacterDetailWorkerProtocol {
         self.networkService = container.networkService
         self.persistenceService = container.persistenceService
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(self.handleNetworkRestored),
-            name: .NetworkStatusChanged,
-            object: nil
-        )
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
+        self.networkMonitor.isConnectedHandler = { [weak self] isConnected in
+            if isConnected, let lastRequestedCharacterID = self?.lastRequestedCharacterID {
+                self?.handleNetworkRestored()
+            }
+        }
     }
     
     func loadCharacter(id: Int, completion: @escaping (Result<Character_, RequestError>) -> Void) {
+        self.lastRequestedCharacterID = id
+        
         if self.networkMonitor.isConnected {
             let params = CharacterParams(id: id)
             self.networkService.sendRequest(requestModel: params) { result in
                 switch result {
-                case .success(let response):
+                case .success(let character):
+                    self.persistenceService.saveCharacters([character])
                     completion(result)
                 case .failure(_):
                     if let character = self.persistenceService.loadCharacter(by: id) {
@@ -58,6 +59,7 @@ final class CharacterDetailWorker: CharacterDetailWorkerProtocol {
                 }
             }
         } else {
+            self.pendingCompletion = completion
             if let character = self.persistenceService.loadCharacter(by: id) {
                 completion(.success(character))
             } else {
@@ -70,10 +72,17 @@ final class CharacterDetailWorker: CharacterDetailWorkerProtocol {
     // MARK: Private Functions
     
     @objc private func handleNetworkRestored() {
-        if NetworkMonitor.shared.isConnected {
-            // Онлайн: грузим из API
-        } else {
-            // Офлайн: грузим из CoreData
+        if self.networkMonitor.isConnected {
+            guard let id = lastRequestedCharacterID, let completion = pendingCompletion else { return }
+            
+            let params = CharacterParams(id: id)
+            self.networkService.sendRequest(requestModel: params) { result in
+                if case .success(let character) = result {
+                    self.persistenceService.saveCharacters([character])
+                }
+                
+                completion(result)
+            }
         }
     }
 }

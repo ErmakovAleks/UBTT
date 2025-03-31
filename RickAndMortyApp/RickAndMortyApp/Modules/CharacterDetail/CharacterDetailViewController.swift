@@ -6,9 +6,13 @@
 //
 
 import UIKit
+import SwiftUI
 
 
 final class CharacterDetailViewController: UIViewController {
+    
+    // MARK: -
+    // MARK: Variables
 
     var interactor: CharacterDetailInteractorProtocol?
     var router: CharacterDetailRoutingLogic?
@@ -19,12 +23,20 @@ final class CharacterDetailViewController: UIViewController {
     private let genderLabel = UILabel()
     private let originLabel = UILabel()
     private let statusLabel = UILabel()
+    
+    private var portraitConstraints: [NSLayoutConstraint] = []
+    private var landscapeConstraints: [NSLayoutConstraint] = []
+    
+    // MARK: -
+    // MARK: UIViewController Life Cycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
         self.view.backgroundColor = .systemGray6
+        
         self.setupLayout()
+        self.setupCardConstraints()
         self.interactor?.fetchCharacter(request: .init())
     }
     
@@ -33,14 +45,32 @@ final class CharacterDetailViewController: UIViewController {
         
         self.navigationController?.setNavigationBarHidden(false, animated: false)
     }
+    
+    override func viewWillTransition(
+        to size: CGSize,
+        with coordinator: any UIViewControllerTransitionCoordinator
+    ) {
+        self.updateCardLayout()
+    }
+    
+    // MARK: -
+    // MARK: Public Functions
 
     func displayCharacter(viewModel: CharacterDetail.Show.ViewModel) {
-            self.nameLabel.text = viewModel.name
-            self.genderLabel.text = "Gender: \(viewModel.gender)"
-            self.originLabel.text = "Origin: \(viewModel.origin)"
-            self.statusLabel.text = "Status: \(viewModel.status)"
-            self.imageView.setImage(from: viewModel.imageURL)
+        self.title = viewModel.name
+        self.nameLabel.text = viewModel.name
+        self.genderLabel.text = "Gender: \(viewModel.gender)"
+        self.originLabel.text = "Origin: \(viewModel.origin)"
+        self.statusLabel.text = "Status: \(viewModel.status)"
+        self.imageView.setImage(from: viewModel.imageURL)
     }
+    
+    func displayError(viewModel: CharacterDetail.Error.ViewModel) {
+        self.router?.showError(errorData: .init(title: "Error", message: viewModel.message))
+    }
+    
+    // MARK: -
+    // MARK: Private Functions
 
     private func setupLayout() {
         self.cardView.backgroundColor = UIColor.systemPink
@@ -79,6 +109,7 @@ final class CharacterDetailViewController: UIViewController {
         
         textStack.axis = .vertical
         textStack.spacing = 8
+        textStack.alignment = .top
         textStack.translatesAutoresizingMaskIntoConstraints = false
         
         self.cardView.addSubview(self.imageView)
@@ -86,10 +117,6 @@ final class CharacterDetailViewController: UIViewController {
         self.view.addSubview(self.cardView)
 
         NSLayoutConstraint.activate([
-            self.cardView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 24),
-            self.cardView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -24),
-            self.cardView.centerYAnchor.constraint(equalTo: self.view.centerYAnchor),
-            
             self.imageView.topAnchor.constraint(equalTo: self.cardView.topAnchor, constant: 16),
             self.imageView.leadingAnchor.constraint(equalTo: self.cardView.leadingAnchor, constant: 16),
             self.imageView.trailingAnchor.constraint(equalTo: self.cardView.trailingAnchor, constant: -16),
@@ -98,7 +125,35 @@ final class CharacterDetailViewController: UIViewController {
             textStack.topAnchor.constraint(equalTo: self.imageView.bottomAnchor, constant: 16),
             textStack.leadingAnchor.constraint(equalTo: self.cardView.leadingAnchor, constant: 16),
             textStack.trailingAnchor.constraint(equalTo: self.cardView.trailingAnchor, constant: -16),
-            textStack.bottomAnchor.constraint(equalTo: self.cardView.bottomAnchor, constant: -16)
+            textStack.bottomAnchor.constraint(lessThanOrEqualTo: self.cardView.bottomAnchor, constant: -16)
         ])
+    }
+    
+    private func setupCardConstraints() {
+        self.cardView.translatesAutoresizingMaskIntoConstraints = false
+        
+        self.portraitConstraints = [
+            self.cardView.centerYAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerYAnchor),
+            self.cardView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 16),
+            self.cardView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -16),
+        ]
+
+        self.landscapeConstraints = [
+            self.cardView.heightAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.heightAnchor, multiplier: 0.8),
+            self.cardView.centerYAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerYAnchor),
+            self.cardView.centerXAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerXAnchor)
+        ]
+
+        self.updateCardLayout()
+    }
+    
+    private func updateCardLayout() {
+        if UIDevice.current.orientation.isLandscape {
+            NSLayoutConstraint.deactivate(self.portraitConstraints)
+            NSLayoutConstraint.activate(self.landscapeConstraints)
+        } else {
+            NSLayoutConstraint.deactivate(self.landscapeConstraints)
+            NSLayoutConstraint.activate(self.portraitConstraints)
+        }
     }
 }

@@ -7,9 +7,10 @@
 
 import Foundation
 
+
 protocol CharacterListWorkerProtocol {
     
-    func loadCharacters(page: Int, completion: @escaping ([Character_]) -> Void)
+    func loadCharacters(page: Int, completion: @escaping (Result<[Character_], RequestError>) -> Void)
 }
 
 final class CharacterListWorker: CharacterListWorkerProtocol {
@@ -17,9 +18,12 @@ final class CharacterListWorker: CharacterListWorkerProtocol {
     // MARK: -
     // MARK: Variables
     
-    private let networkMonitor: NetworkMonitorProtocol
+    private var networkMonitor: NetworkMonitorProtocol
     private let networkService: NetworkSessionProtocol
     private let persistenceService: PersistenceServiceProtocol
+    
+    private var lastRequestedPage: Int?
+    private var pendingCompletion: ((Result<[Character_], RequestError>) -> Void)?
     
     // MARK: -
     // MARK: Initialization
@@ -29,45 +33,63 @@ final class CharacterListWorker: CharacterListWorkerProtocol {
         self.networkService = container.networkService
         self.persistenceService = container.persistenceService
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(self.handleNetworkRestored),
-            name: .NetworkStatusChanged,
-            object: nil
-        )
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
+        self.networkMonitor.isConnectedHandler = { [weak self] isConnected in
+            if isConnected, let lastRequestedPage = self?.lastRequestedPage {
+                self?.handleNetworkRestored()
+            }
+        }
     }
     
     // MARK: -
     // MARK: Character List Worker Protocol
 
-    func loadCharacters(page: Int, completion: @escaping ([Character_]) -> Void) {
+    func loadCharacters(page: Int, completion: @escaping (Result<[Character_], RequestError>) -> Void) {
+        self.lastRequestedPage = page
+        
         if self.networkMonitor.isConnected {
         let params = CharactersParams(page: page)
             self.networkService.sendRequest(requestModel: params) { result in
                 switch result {
                 case .success(let response):
-                    completion(response.results)
+                    self.persistenceService.saveCharacters(response.results)
+                    completion(.success(response.results))
                 case .failure(_):
-                    completion(self.persistenceService.loadCharacters())
+                    self.tryGetFromCache(completion: completion)
                 }
             }
         } else {
-            completion(self.persistenceService.loadCharacters())
+            self.pendingCompletion = completion
+            self.tryGetFromCache(completion: completion)
         }
     }
     
     // MARK: -
     // MARK: Private Functions
     
-    @objc private func handleNetworkRestored() {
-        if NetworkMonitor.shared.isConnected {
-            // Онлайн: грузим из API
+    private func tryGetFromCache(
+        completion: @escaping (Result<[Character_], RequestError>) -> Void
+    ) {
+        let characters = self.persistenceService.loadCharacters()
+        if !characters.isEmpty {
+            completion(.success(characters))
         } else {
-            // Офлайн: грузим из CoreData
+            completion(.failure(.noResponse))
+        }
+    }
+    
+    @objc private func handleNetworkRestored() {
+        if self.networkMonitor.isConnected {
+            guard let page = lastRequestedPage, let completion = pendingCompletion else { return }
+            
+            let params = CharactersParams(page: page)
+            self.networkService.sendRequest(requestModel: params) { result in
+                if case .success(let characters) = result {
+                    self.persistenceService.saveCharacters(characters.results)
+                    completion(.success(characters.results))
+                } else {
+                    completion(.failure(.unknown("<!> Unknown error")))
+                }
+            }
         }
     }
 }

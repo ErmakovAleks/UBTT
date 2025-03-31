@@ -40,12 +40,9 @@ struct Character_: Codable {
     let id: Int
     let name: String
     let status: CharacterStatus
-    let type: String
     let gender: Gender
     let origin: Origin
-    let location: Location_
     let image: String
-    let url: String
 }
 
 enum CharacterStatus: String, Codable {
@@ -64,12 +61,6 @@ enum Gender: String, Codable {
 }
 
 struct Origin: Codable {
-    
-    let name: String
-    let url: String
-}
-
-struct Location_: Codable {
     
     let name: String
     let url: String
@@ -108,4 +99,10 @@ enum CharacterList {
             let displayedCharacters: [DisplayedCharacter]
         }
     }
+    
+    enum Error {
+        
+            struct Response { let error: RequestError }
+            struct ViewModel { let message: String }
+        }
 }

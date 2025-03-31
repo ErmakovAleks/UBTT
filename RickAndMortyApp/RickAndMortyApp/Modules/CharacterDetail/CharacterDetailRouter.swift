@@ -11,6 +11,8 @@ import UIKit
 protocol CharacterDetailRoutingLogic {
     
     var coordinator: Navigating? { get set }
+    
+    func showError(errorData: AlertData)
 }
 
 final class CharacterDetailRouter: CharacterDetailRoutingLogic {
@@ -20,4 +22,11 @@ final class CharacterDetailRouter: CharacterDetailRoutingLogic {
     
     weak var viewController: UIViewController?
     var coordinator: Navigating?
+    
+    // MARK: -
+    // MARK: Character Detail Routing Logic
+    
+    func showError(errorData: AlertData) {
+        self.coordinator?.navigateTo(.modal(errorData), from: self.viewController)
+    }
 }

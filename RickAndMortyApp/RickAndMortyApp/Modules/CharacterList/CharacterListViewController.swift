@@ -49,6 +49,10 @@ final class CharacterListViewController: UIViewController {
         self.dataSource?.apply(snapshot, animatingDifferences: false)
     }
     
+    func displayError(viewModel: CharacterDetail.Error.ViewModel) {
+        self.router?.showError(errorData: .init(title: "Error", message: viewModel.message))
+    }
+    
     // MARK: -
     // MARK: Private Functions
     

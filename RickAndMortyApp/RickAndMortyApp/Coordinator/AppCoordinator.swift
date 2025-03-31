@@ -22,7 +22,6 @@ struct AlertData {
     
     let title: String
     let message: String
-    let actions: [UIAlertAction]
 }
 
 enum AppScreen {
@@ -80,8 +79,7 @@ final class AppCoordinator: Navigating {
             
             self.splitViewController = splitVC
 
-            let placeholder = UIViewController()
-            placeholder.view.backgroundColor = .systemPurple
+            let placeholder = PlaceholderDetailViewController()
 
             splitVC.setViewController(viewController, for: .primary)
             splitVC.setViewController(placeholder, for: .secondary)
@@ -105,7 +103,7 @@ final class AppCoordinator: Navigating {
             self.showScreen(viewController: viewController)
         case .modal(let alertData):
             let alert = UIAlertController(title: alertData.title, message: alertData.message, preferredStyle: .alert)
-            alertData.actions.forEach { alert.addAction($0) }
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
             source?.present(alert, animated: true)
         }
     }

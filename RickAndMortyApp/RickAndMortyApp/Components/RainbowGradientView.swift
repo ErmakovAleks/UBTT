@@ -30,7 +30,6 @@ final class RainbowGradientView: UIView {
         super.layoutSubviews()
         
         self.applyRainbowGradient()
-        self.startRotating()
     }
     
     // MARK: -
@@ -52,20 +51,5 @@ final class RainbowGradientView: UIView {
         ]
         
         self.gradientLayer?.locations = stride(from: 0, through: 1, by: 1.0 / 7.0).map { NSNumber(value: Float($0)) }
-    }
-    
-    private func startRotating() {
-        if self.gradientLayer?.animation(forKey: "rotation") != nil {
-            return
-        }
-        
-        let rotation = CABasicAnimation(keyPath: "transform.rotation.z")
-        rotation.fromValue = 0
-        rotation.toValue = 2 * Double.pi
-        rotation.duration = 10
-        rotation.repeatCount = .infinity
-        rotation.timingFunction = CAMediaTimingFunction(name: .linear)
-        
-        self.gradientLayer?.add(rotation, forKey: "rotation")
     }
 }

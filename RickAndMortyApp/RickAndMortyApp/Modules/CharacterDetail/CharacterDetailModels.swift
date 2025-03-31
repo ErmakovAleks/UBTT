@@ -41,4 +41,10 @@ enum CharacterDetail {
             let imageURL: String
         }
     }
+    
+    enum Error {
+        
+            struct Response { let error: RequestError }
+            struct ViewModel { let message: String }
+        }
 }

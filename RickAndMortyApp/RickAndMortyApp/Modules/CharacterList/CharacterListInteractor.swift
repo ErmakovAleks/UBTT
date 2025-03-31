@@ -31,10 +31,16 @@ final class CharacterListInteractor: CharacterListInteractorProtocol {
         guard !self.isLoading else { return }
         self.isLoading = true
         
-        self.worker?.loadCharacters(page: self.currentPage) { [weak self] characters in
+        self.worker?.loadCharacters(page: self.currentPage) { [weak self] result in
             self?.isLoading = false
-            let response = CharacterList.Fetch.Response(characters: characters)
-            self?.presenter?.presentCharacters(response: response)
+            
+            switch result {
+            case .success(let characters):
+                let response = CharacterList.Fetch.Response(characters: characters)
+                self?.presenter?.presentCharacters(response: response)
+            case .failure(let error):
+                self?.presenter?.presentError(response: .init(error: error))
+            }
         }
     }
     

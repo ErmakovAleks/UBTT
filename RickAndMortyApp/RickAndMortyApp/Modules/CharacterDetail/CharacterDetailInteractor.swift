@@ -29,8 +29,14 @@ final class CharacterDetailInteractor: CharacterDetailInteractorProtocol {
 
     func fetchCharacter(request: CharacterDetail.Show.Request) {
         self.worker?.loadCharacter(id: self.characterID) { [weak self] result in
-            guard let self, case let .success(character) = result else { return }
-            self.presenter?.presentCharacter(response: .init(character: character))
+            guard let self else { return }
+            
+            switch result {
+            case .success(let character):
+                self.presenter?.presentCharacter(response: .init(character: character))
+            case .failure(let error):
+                self.presenter?.presentError(response: .init(error: error))
+            }
         }
     }
 }

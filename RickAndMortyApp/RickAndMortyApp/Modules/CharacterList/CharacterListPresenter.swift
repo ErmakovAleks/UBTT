@@ -10,6 +10,8 @@ import Foundation
 protocol CharacterListPresentationLogic {
     
     func presentCharacters(response: CharacterList.Fetch.Response)
+    
+    func presentError(response: CharacterList.Error.Response)
 }
 
 final class CharacterListPresenter: CharacterListPresentationLogic {
@@ -20,7 +22,7 @@ final class CharacterListPresenter: CharacterListPresentationLogic {
     weak var viewController: CharacterListViewController?
     
     // MARK: -
-    // MARK: Functions
+    // MARK: Character List Presentation Logic
 
     func presentCharacters(response: CharacterList.Fetch.Response) {
         let viewModel = CharacterList.Fetch.ViewModel(
@@ -36,5 +38,28 @@ final class CharacterListPresenter: CharacterListPresentationLogic {
         )
         
         self.viewController?.displayCharacters(viewModel: viewModel)
+    }
+    
+    func presentError(response: CharacterList.Error.Response) {
+            let message: String
+
+            switch response.error {
+            case .noResponse:
+                message = "No response from server. Please, try later"
+            case .decode:
+                message = "Parsing data error"
+            case .unauthorized:
+                message = "No authorized"
+            case .unexpectedStatusCode(let url):
+                message = "Server sent error. URL: \(url)"
+            case .failure(let err):
+                message = err.localizedDescription
+            case .unknown:
+                message = "Unknown error"
+            case .invalidURL:
+                message = "Invalid URL"
+            }
+
+        self.viewController?.displayError(viewModel: .init(message: message))
     }
 }

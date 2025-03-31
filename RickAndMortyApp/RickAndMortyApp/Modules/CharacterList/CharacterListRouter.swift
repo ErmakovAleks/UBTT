@@ -13,6 +13,8 @@ protocol CharacterListRoutingLogic {
     var coordinator: Navigating? { get set }
     
     func routeToDetail(for characterID: Int)
+    
+    func showError(errorData: AlertData)
 }
 
 final class CharacterListRouter: CharacterListRoutingLogic {
@@ -24,9 +26,13 @@ final class CharacterListRouter: CharacterListRoutingLogic {
     var coordinator: Navigating?
     
     // MARK: -
-    // MARK: Functions
+    // MARK: Character List Routing Logic
 
     func routeToDetail(for characterID: Int) {
         self.coordinator?.navigateTo(.characterDetails(characterID))
+    }
+    
+    func showError(errorData: AlertData) {
+        self.coordinator?.navigateTo(.modal(errorData), from: self.viewController)
     }
 }

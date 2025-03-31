@@ -13,6 +13,8 @@ protocol NetworkMonitorProtocol {
     
     var isConnected: Bool { get }
     
+    var isConnectedHandler: ((Bool) -> ())? { get set }
+    
     static var shared: Self { get }
 }
 
@@ -27,6 +29,8 @@ final class NetworkMonitor: NetworkMonitorProtocol {
     // MARK: Variables
     
     static let shared = NetworkMonitor()
+    
+    var isConnectedHandler: ((Bool) -> ())?
 
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")
@@ -48,8 +52,8 @@ final class NetworkMonitor: NetworkMonitorProtocol {
     private init() {
         self.monitor.pathUpdateHandler = { [weak self] path in
             self?.isConnected = path.status == .satisfied
+            self?.isConnectedHandler?(path.status == .satisfied)
             self?.connectionType = self?.getConnectionType(from: path) ?? .unknown
-            NotificationCenter.default.post(name: .NetworkStatusChanged, object: nil)
         }
         
         self.monitor.start(queue: queue)
